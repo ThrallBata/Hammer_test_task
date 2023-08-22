@@ -1,8 +1,8 @@
 from django.urls import path, include, re_path
 
-from .views import authenticateAPIView
+from .views import authenticate_phoneAPIView
 
 
 urlpatterns = [
-    path('users/', authenticateAPIView),
+    path('auth/', authenticate_phoneAPIView),
 ]

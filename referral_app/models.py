@@ -18,16 +18,6 @@ class ProfileManager(BaseUserManager):
 
         return profile
 
-    def create_auth_code(self, profile: int):
-        code = random.randint(1000, 9999)
-        init_date = datetime.now()
-        end_date = datetime.now() + timedelta(minutes=5)
-
-        code = self.model(profile=profile, code=code, init_date=init_date, end_date=end_date)
-        code.save()
-
-        return code
-
 
 class Profile(models.Model):
     phone = models.CharField(max_length=30, null=False, verbose_name='Номер телефона')
@@ -52,15 +42,28 @@ class Profile(models.Model):
             'id': self.pk,
             'exp': int(dt.strftime('%s'))
         }, settings.SECRET_KEY, algorithm='HS256')
+        return token
 
-        return token.decode('utf-8')
+
+class AuthCodeManager(BaseUserManager):
+    def create_auth_code(self, profile):
+        code = random.randint(1000, 9999)
+        init_date = datetime.now()
+        end_date = datetime.now() + timedelta(minutes=5)
+
+        code = self.model(profile=profile, code=code, init_date=init_date, end_date=end_date)
+        code.save()
+
+        return code
 
 
 class AuthCode(models.Model):
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, null=True, verbose_name='Пользователь')
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, verbose_name='Пользователь')
     code = models.IntegerField(null=False)
     init_date = models.DateTimeField(editable=False)
     end_date = models.DateTimeField(null=True)
+
+    object = AuthCodeManager()
 
 
 def generate_invite_code() -> str:
