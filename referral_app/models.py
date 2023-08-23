@@ -42,6 +42,7 @@ class Profile(models.Model):
             'id': self.pk,
             'exp': int(dt.strftime('%s'))
         }, settings.SECRET_KEY, algorithm='HS256')
+
         return token
 
 
@@ -61,7 +62,7 @@ class AuthCode(models.Model):
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, verbose_name='Пользователь')
     code = models.IntegerField(null=False)
     init_date = models.DateTimeField(editable=False)
-    end_date = models.DateTimeField(null=True)
+    end_date = models.DateTimeField(editable=False)
 
     object = AuthCodeManager()
 
