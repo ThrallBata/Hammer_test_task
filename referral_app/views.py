@@ -1,6 +1,4 @@
-import time
 from datetime import datetime
-
 
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -8,7 +6,7 @@ from rest_framework.response import Response
 
 from .models import Profile, AuthCode
 from .serializers import ProfileSerializer
-
+from .tasks import send_authcode
 
 @api_view(['POST'])
 def authenticate_phoneAPIView(request): #  получения номера телефона, создание и отправка кода
@@ -24,8 +22,10 @@ def authenticate_phoneAPIView(request): #  получения номера те�
 
     authcode = AuthCode.object.create_auth_code(profile)
     print('Отправка кода на телефон')
-    time.sleep(2)
-    print(f'Код для аутентификации: {authcode.code}')
+    send_authcode.delay(phone, authcode.code)
+
+    # time.sleep(10)
+    # print(f'Код для аутентификации: {authcode.code}')
 
     return Response({}, status=status.HTTP_200_OK)
 

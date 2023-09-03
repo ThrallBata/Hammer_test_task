@@ -42,7 +42,6 @@ class Profile(models.Model):
             'id': self.pk,
             'exp': int(dt.strftime('%s'))
         }, settings.SECRET_KEY, algorithm='HS256')
-
         return token
 
 
