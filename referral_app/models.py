@@ -1,11 +1,12 @@
 import random
+import jwt
 
 from datetime import datetime, timedelta
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
 from django.conf import settings
 
-import jwt
+# from .utils import generate_invite_code
 
 
 class ProfileManager(BaseUserManager):
@@ -45,16 +46,16 @@ class Profile(models.Model):
         return token
 
 
-class AuthCodeManager(BaseUserManager):
-    def create_auth_code(self, profile):
-        code = random.randint(1000, 9999)
-        init_date = datetime.now()
-        end_date = datetime.now() + timedelta(minutes=5)
-
-        code = self.model(profile=profile, code=code, init_date=init_date, end_date=end_date)
-        code.save()
-
-        return code
+# class AuthCodeManager(BaseUserManager):
+#     def create_auth_code(self, profile):
+#         code = random.randint(1000, 9999)
+#         init_date = datetime.now()
+#         end_date = datetime.now() + timedelta(minutes=5)
+#
+#         code = self.model(profile=profile, code=code, init_date=init_date, end_date=end_date)
+#         code.save()
+#
+#         return code
 
 
 class AuthCode(models.Model):
@@ -63,7 +64,7 @@ class AuthCode(models.Model):
     init_date = models.DateTimeField(editable=False)
     end_date = models.DateTimeField(editable=False)
 
-    object = AuthCodeManager()
+    # object = AuthCodeManager()
 
 
 def generate_invite_code() -> str:
@@ -82,9 +83,6 @@ def generate_invite_code() -> str:
         generate_invite_code()
     else:
         return invite_code
-
-
-
 
 
 
