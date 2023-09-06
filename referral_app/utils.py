@@ -11,10 +11,10 @@ from django.conf import settings
 redis_auth_code = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=1)
 
 
-def create_auth_code(profile_id):
+def create_auth_code(phone):
     code = random.randint(1000, 9999)
-    redis_auth_code.setex(str(profile_id), timedelta(minutes=5), value=str(code))
-    print(f'время жизни кода аутентификации: {redis_auth_code.ttl(str(profile_id))}')
+    redis_auth_code.setex(str(phone), timedelta(minutes=5), value=str(code))
+    print(f'время жизни кода аутентификации: {redis_auth_code.ttl(str(phone))}')
 
     return code
 
