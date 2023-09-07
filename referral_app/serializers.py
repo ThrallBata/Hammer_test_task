@@ -3,8 +3,7 @@ from .models import *
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-
-    # token = serializers.CharField(max_length=255, read_only=True)
+    token = serializers.CharField(max_length=255, read_only=True)
 
     class Meta:
         model = Profile

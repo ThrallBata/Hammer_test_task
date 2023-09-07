@@ -1,12 +1,7 @@
 import random
-import jwt
 
-from datetime import datetime, timedelta
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
-from django.conf import settings
-
-# from .utils import generate_invite_code
 
 
 class ProfileManager(BaseUserManager):
@@ -14,7 +9,7 @@ class ProfileManager(BaseUserManager):
         if phone is None:
             raise TypeError('Users must have a phone number.')
 
-        profile = self.model(phone=phone, invite_code=generate_invite_code())
+        profile = self.model(phone=phone, invite_code=generate_invite_code(6))
         profile.save()
 
         return profile
@@ -31,20 +26,6 @@ class Profile(models.Model):
     def __str__(self):
         return self.phone
 
-    # @property
-    def token(self):
-        return self._generate_jwt_token()
-
-    def _generate_jwt_token(self):
-
-        dt = datetime.now() + timedelta(days=1)
-
-        token = jwt.encode({
-            'id': self.pk,
-            'exp': int(dt.strftime('%s'))
-        }, settings.SECRET_KEY, algorithm='HS256')
-        return token
-
 
 # class AuthCodeManager(BaseUserManager):
 #     def create_auth_code(self, profile):
@@ -58,20 +39,20 @@ class Profile(models.Model):
 #         return code
 
 
-class AuthCode(models.Model):
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, verbose_name='Пользователь')
-    code = models.IntegerField(null=False)
-    init_date = models.DateTimeField(editable=False)
-    end_date = models.DateTimeField(editable=False)
+# class AuthCode(models.Model):
+#     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, verbose_name='Пользователь')
+#     code = models.IntegerField(null=False)
+#     init_date = models.DateTimeField(editable=False)
+#     end_date = models.DateTimeField(editable=False)
+#
+#     # object = AuthCodeManager()
 
-    # object = AuthCodeManager()
 
-
-def generate_invite_code() -> str:
+def generate_invite_code(n: int) -> str:
     chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
     invite_code_list = []
 
-    for i in range(6):
+    for i in range(n):
         invite_code_list.append(random.choice(chars))
 
     invite_code = ''.join(invite_code_list)
@@ -80,7 +61,7 @@ def generate_invite_code() -> str:
      если код уникальный вернет значение """
     is_non_unique = Profile.object.filter(invite_code=invite_code).exists()
     if is_non_unique:
-        generate_invite_code()
+        generate_invite_code(n)
     else:
         return invite_code
 

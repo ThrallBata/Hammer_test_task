@@ -1,4 +1,4 @@
-from datetime import datetime
+
 
 import redis
 
@@ -7,12 +7,10 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Profile, AuthCode
+from .models import Profile
 from .serializers import ProfileSerializer
 from .tasks import send_authcode
-from .utils import create_auth_code, redis_auth_code
-
-redis_jwt = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=2)
+from .utils import create_auth_code, redis_auth_code, redis_jwt, token_jwt
 
 
 @api_view(['POST'])
@@ -40,34 +38,17 @@ def authenticate_codeAPIView(request):
     authcode = request.data.get('authcode')
     phone = request.data.get('phone')
 
-    print(authcode)
-
-    code_redis = redis_auth_code.get(phone).decode("utf-8")
+    code_redis = redis_auth_code.get(phone)
     if code_redis:
-        print(code_redis)
+        code_redis = code_redis.decode("utf-8")
         if code_redis == authcode:
             profile = Profile.object.get(phone=phone)
+            token = token_jwt(profile.phone)
 
-            # TODO как проверить, что номер существует без доп запроса в базу
-
-            # token = Profile.token(profile)
             return Response(ProfileSerializer(
-                {'phone': profile.phone, 'invite_code': profile.invite_code, 'token':"111"}, ).data)
+                {'phone': profile.phone, 'invite_code': profile.invite_code, 'token': token}, ).data)
 
-        return Response({'error': 'неверный код', }, status=status.HTTP_400_BAD_REQUEST)
-
-    # if authcode_queryset.exists():
-    #     date_now = datetime.now()
-    #     for authcode_elem in authcode_queryset:
-    #         if authcode_elem.end_date > date_now:
-    #             print(authcode_elem.profile)
-    #             profile = Profile.object.get(phone=authcode_elem.profile)
-    #             token = Profile.token(profile)
-    #             return Response(ProfileSerializer(
-    #                 {'phone': profile.phone, 'invite_code': profile.invite_code, 'token': token}, ).data)
-    # else:
-    #     return Response({}, status=status.HTTP_400_BAD_REQUEST)
-    return Response({}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'error': 'неверные данные',}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
