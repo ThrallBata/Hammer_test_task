@@ -9,6 +9,7 @@ from django.conf import settings
 
 redis_auth_code = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=1)
 redis_jwt = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=2)
+redis_refresh_token = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=3)
 
 
 def create_auth_code(phone):
@@ -19,15 +20,26 @@ def create_auth_code(phone):
     return code
 
 
-def token_jwt(phone):
-    return _generate_jwt_token(phone)
+def token_jwt(phone, type_token='access'):
+    lifetime = settings.JWT_TOKEN_LIFETIME
+
+    if type_token == 'refresh':
+        days = settings.JWT_TOKEN_LIFETIME
+        lifetime = int(days) * 24
+
+    token = _generate_jwt_token(phone, lifetime)
+    if type_token == 'access':
+        redis_jwt.setex(phone, timedelta(hours=int(lifetime)), value=token)
+    else:
+        redis_refresh_token.setex(phone, timedelta(hours=int(lifetime)), value=token)
+    return token
 
 
-def _generate_jwt_token(phone):
+def _generate_jwt_token(phone, lifetime):
 
     token = jwt.encode({
         'phone': phone,
+        'lifetime': f"{lifetime} hours"
     }, settings.SECRET_KEY, algorithm='HS256')
 
-    redis_jwt.setex(phone, timedelta(hours=2), value=token)
     return token

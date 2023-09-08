@@ -1,8 +1,3 @@
-
-
-import redis
-
-from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -10,7 +5,7 @@ from rest_framework.response import Response
 from .models import Profile
 from .serializers import ProfileSerializer
 from .tasks import send_authcode
-from .utils import create_auth_code, redis_auth_code, redis_jwt, token_jwt
+from .utils import create_auth_code, redis_auth_code, redis_jwt, redis_refresh_token, token_jwt
 
 
 @api_view(['POST'])
@@ -44,13 +39,19 @@ def authenticate_codeAPIView(request):
         if code_redis == authcode:
             profile = Profile.object.get(phone=phone)
             token = token_jwt(profile.phone)
-
+            token_refresh = token_jwt(profile.phone, 'refresh')
+            print(token, 'token')
+            print(token_refresh, 'reftoken')
             return Response(ProfileSerializer(
-                {'phone': profile.phone, 'invite_code': profile.invite_code, 'token': token}, ).data)
+                {'phone': profile.phone, 'invite_code': profile.invite_code, 'token': token, 'token_refresh': token_refresh}, ).data)
 
     return Response({'error': 'неверные данные',}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# TODO продумать и сделать рефреш токен-систему и дальнейший функционал
 
 
-
+@api_view(['POST'])
+def authenticate_refresh_tokenAPIView(request):
+    refresh_token = request.data.get('refresh_token')
+    ...
