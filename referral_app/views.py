@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from .models import Profile
 from .serializers import ProfileSerializer
 from .tasks import send_authcode
-from .utils import create_auth_code, redis_auth_code, redis_jwt, redis_refresh_token, token_jwt
+from .utils import *
 
 
 @api_view(['POST'])
@@ -38,12 +38,9 @@ def authenticate_codeAPIView(request):
         code_redis = code_redis.decode("utf-8")
         if code_redis == authcode:
             profile = Profile.object.get(phone=phone)
-            token = token_jwt(profile.phone)
-            token_refresh = token_jwt(profile.phone, 'refresh')
-            print(token, 'token')
-            print(token_refresh, 'reftoken')
+            token = get_tokens(profile.phone)
             return Response(ProfileSerializer(
-                {'phone': profile.phone, 'invite_code': profile.invite_code, 'token': token, 'token_refresh': token_refresh}, ).data)
+                {'phone': profile.phone, 'invite_code': profile.invite_code, 'token': token['jwt'], 'token_refresh': token['refresh']}, ).data)
 
     return Response({'error': 'неверные данные',}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -53,5 +50,19 @@ def authenticate_codeAPIView(request):
 
 @api_view(['POST'])
 def authenticate_refresh_tokenAPIView(request):
-    refresh_token = request.data.get('refresh_token')
-    ...
+    token_refresh = request.data.get('token_refresh')
+    phone = request.data.get('phone')
+
+    token_refresh_redis = redis_refresh_token.get(phone)
+
+    redis_refresh_token.delete(phone)
+    redis_auth_code.delete(phone)
+
+    if token_refresh_redis:
+        token_refresh_redis = token_refresh_redis.decode("utf-8")
+        if token_refresh == token_refresh_redis:
+            token = get_tokens(phone)
+            return Response({'token': token['jwt'], 'token_refresh': token['refresh']}, )
+
+    return Response({'error': 'неверные данные', }, status=status.HTTP_400_BAD_REQUEST)
+

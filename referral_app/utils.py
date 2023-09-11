@@ -20,18 +20,25 @@ def create_auth_code(phone):
     return code
 
 
-def token_jwt(phone, type_token='access'):
+def get_tokens(phone):
+    return {'jwt': token_jwt(phone), 'refresh': token_refresh(phone)}
+
+
+def token_jwt(phone):
     lifetime = settings.JWT_TOKEN_LIFETIME
-
-    if type_token == 'refresh':
-        days = settings.JWT_TOKEN_LIFETIME
-        lifetime = int(days) * 24
-
     token = _generate_jwt_token(phone, lifetime)
-    if type_token == 'access':
-        redis_jwt.setex(phone, timedelta(hours=int(lifetime)), value=token)
-    else:
-        redis_refresh_token.setex(phone, timedelta(hours=int(lifetime)), value=token)
+    redis_jwt.setex(phone, timedelta(hours=int(lifetime)), value=token)
+
+    return token
+
+
+def token_refresh(phone):
+    days = settings.REFRESH_TOKEN_LIFETIME
+    lifetime = int(days) * 24
+
+    token = _generate_refresh_token()
+    redis_refresh_token.setex(phone, timedelta(hours=int(lifetime)), value=token)
+
     return token
 
 
@@ -43,3 +50,16 @@ def _generate_jwt_token(phone, lifetime):
     }, settings.SECRET_KEY, algorithm='HS256')
 
     return token
+
+
+def _generate_refresh_token():
+    chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890@!#$%^&*.'
+    token_list = []
+    n = random.randint(35, 40)
+
+    for i in range(n):
+        token_list.append(random.choice(chars))
+
+    refresh_token = ''.join(token_list)
+
+    return refresh_token
