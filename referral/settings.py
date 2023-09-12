@@ -28,7 +28,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("SECRET_AUTH")
-
+JWT_TOKEN_LIFETIME = os.environ.get("JWT_TOKEN_LIFETIME")   # hours
+REFRESH_TOKEN_LIFETIME = os.environ.get("REFRESH_TOKEN_LIFETIME")   # days
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -119,12 +120,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ]
+    ],
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
 
-SIMPLE_JWT = {
-   'AUTH_HEADER_TYPES': ('JWT',),
-}
+# SIMPLE_JWT = {
+#    'AUTH_HEADER_TYPES': ('JWT',),}
+
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 

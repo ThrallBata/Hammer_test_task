@@ -1,18 +1,11 @@
-from datetime import datetime
-
-import redis
-
-from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Profile, AuthCode
+from .models import Profile
 from .serializers import ProfileSerializer
 from .tasks import send_authcode
-from .utils import create_auth_code, redis_auth_code
-
-redis_jwt = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=2)
+from .utils import *
 
 
 @api_view(['POST'])
@@ -26,11 +19,11 @@ def authenticate_phoneAPIView(request):   # получения номера те
         pass
         # profile = profile_queryset[0]
     else:
-        profile = Profile.object.create_profile(phone)
+        Profile.object.create_profile(phone)
 
-    authcode = create_auth_code(phone)
-    print('Отправка кода на телефон')
-    send_authcode.delay(phone, authcode)
+    if redis_auth_code.exists(phone) == 0:
+        authcode = create_auth_code(phone)
+        send_authcode.delay(phone, authcode)
 
     return Response({}, status=status.HTTP_200_OK)
 
@@ -40,36 +33,38 @@ def authenticate_codeAPIView(request):
     authcode = request.data.get('authcode')
     phone = request.data.get('phone')
 
-    print(authcode)
-
-    code_redis = redis_auth_code.get(phone).decode("utf-8")
+    code_redis = redis_auth_code.get(phone)
     if code_redis:
-        print(code_redis)
+        code_redis = code_redis.decode("utf-8")
+
         if code_redis == authcode:
             profile = Profile.object.get(phone=phone)
 
-            # TODO как проверить, что номер существует без доп запроса в базу
-
-            # token = Profile.token(profile)
+            token = get_tokens(profile.phone)
             return Response(ProfileSerializer(
-                {'phone': profile.phone, 'invite_code': profile.invite_code, 'token':"111"}, ).data)
+                {'phone': profile.phone, 'invite_code': profile.invite_code, 'token': token['jwt'], 'token_refresh': token['refresh']}, ).data)
 
-        return Response({'error': 'неверный код', }, status=status.HTTP_400_BAD_REQUEST)
-
-    # if authcode_queryset.exists():
-    #     date_now = datetime.now()
-    #     for authcode_elem in authcode_queryset:
-    #         if authcode_elem.end_date > date_now:
-    #             print(authcode_elem.profile)
-    #             profile = Profile.object.get(phone=authcode_elem.profile)
-    #             token = Profile.token(profile)
-    #             return Response(ProfileSerializer(
-    #                 {'phone': profile.phone, 'invite_code': profile.invite_code, 'token': token}, ).data)
-    # else:
-    #     return Response({}, status=status.HTTP_400_BAD_REQUEST)
-    return Response({}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'error': 'неверные данные',}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# TODO продумать и сделать рефреш токен-систему и дальнейший функционал
 
 
+@api_view(['POST'])
+def authenticate_refresh_tokenAPIView(request):
+    token_refresh_elem = request.data.get('token_refresh')
+    phone = request.data.get('phone')
+
+    token_refresh_redis = redis_refresh_token.get(phone)
+
+    redis_refresh_token.delete(phone)
+    redis_auth_code.delete(phone)
+
+    if token_refresh_redis:
+        token_refresh_redis = token_refresh_redis.decode("utf-8")
+        if token_refresh_elem == token_refresh_redis:
+            token = get_tokens(phone)
+            return Response({'token': token['jwt'], 'token_refresh': token['refresh']}, )
+
+    return Response({'error': 'неверные данные', }, status=status.HTTP_400_BAD_REQUEST)
 
