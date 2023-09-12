@@ -19,11 +19,11 @@ def authenticate_phoneAPIView(request):   # получения номера те
         pass
         # profile = profile_queryset[0]
     else:
-        profile = Profile.object.create_profile(phone)
+        Profile.object.create_profile(phone)
 
-    authcode = create_auth_code(phone)
-    print('Отправка кода на телефон')
-    send_authcode.delay(phone, authcode)
+    if redis_auth_code.exists(phone) == 0:
+        authcode = create_auth_code(phone)
+        send_authcode.delay(phone, authcode)
 
     return Response({}, status=status.HTTP_200_OK)
 
@@ -36,8 +36,10 @@ def authenticate_codeAPIView(request):
     code_redis = redis_auth_code.get(phone)
     if code_redis:
         code_redis = code_redis.decode("utf-8")
+
         if code_redis == authcode:
             profile = Profile.object.get(phone=phone)
+
             token = get_tokens(profile.phone)
             return Response(ProfileSerializer(
                 {'phone': profile.phone, 'invite_code': profile.invite_code, 'token': token['jwt'], 'token_refresh': token['refresh']}, ).data)
@@ -50,7 +52,7 @@ def authenticate_codeAPIView(request):
 
 @api_view(['POST'])
 def authenticate_refresh_tokenAPIView(request):
-    token_refresh = request.data.get('token_refresh')
+    token_refresh_elem = request.data.get('token_refresh')
     phone = request.data.get('phone')
 
     token_refresh_redis = redis_refresh_token.get(phone)
@@ -60,7 +62,7 @@ def authenticate_refresh_tokenAPIView(request):
 
     if token_refresh_redis:
         token_refresh_redis = token_refresh_redis.decode("utf-8")
-        if token_refresh == token_refresh_redis:
+        if token_refresh_elem == token_refresh_redis:
             token = get_tokens(phone)
             return Response({'token': token['jwt'], 'token_refresh': token['refresh']}, )
 
