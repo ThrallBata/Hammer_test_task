@@ -47,7 +47,7 @@ def authenticate_codeAPIView(request):
     return Response({'error': 'неверные данные',}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# TODO продумать и сделать рефреш токен-систему и дальнейший функционал
+# TODO продумать и сделать дальнейший функционал
 
 
 @api_view(['POST'])
@@ -66,5 +66,49 @@ def authenticate_refresh_tokenAPIView(request):
             token = get_tokens(phone)
             return Response({'token': token['jwt'], 'token_refresh': token['refresh']}, )
 
-    return Response({'error': 'неверные данные', }, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'error': 'Неверные данные', }, status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['POST'])
+def activate_invite_codeAPIView(request):
+    phone = request.data.get('phone')
+    token = request.data.get('token')
+    invite_code = request.data.get('invite_code')
+    # TODO проверка валидности invite_code
+    token_redis = redis_jwt.get(phone)
+
+    error = 'Неверные данные'
+
+    if token_redis:
+        token_redis = token_redis.decode('utf-8')
+        if token == token_redis:
+            profile = Profile.object.get(phone=phone)
+            if profile.inviter is None:
+                profile.inviter = invite_code
+                profile.save()
+                return Response({"profile": profile.inviter}, status=status.HTTP_200_OK)
+            else:
+                error = 'Для профиля код уже был активирован!'
+
+    return Response({'error': error, }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def show_who_activated_invite_codeAPIView(request):
+    phone = request.data.get('phone')
+    token = request.data.get('token')
+
+    token_redis = redis_jwt.get(phone)
+
+    if token_redis:
+        token_redis = token_redis.decode('utf-8')
+        if token == token_redis:
+            data = {}
+            profile = Profile.object.get(phone=phone)
+            invited_profiles = Profile.object.filter(inviter=profile.invite_code)
+            invited_profiles_list = list(invited_profiles.values('phone'))
+            for count in range(len(invited_profiles_list)):
+                data[count] = invited_profiles_list[count]['phone']
+            return Response(data, status=status.HTTP_200_OK)
+
+    return Response({'error': 'Неверные данные', }, status=status.HTTP_400_BAD_REQUEST)
