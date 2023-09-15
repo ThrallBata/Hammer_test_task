@@ -13,7 +13,6 @@ def authenticate_phoneAPIView(request):   # получения номера те
     phone = request.data.get('phone')
     profile_queryset = Profile.object.filter(phone=phone)
 
-    # TODO проверка валидности номера телефона при отправке
 
     if profile_queryset.exists():
         pass
@@ -47,7 +46,7 @@ def authenticate_codeAPIView(request):
     return Response({'error': 'неверные данные',}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# TODO продумать и сделать дальнейший функционал
+
 
 
 @api_view(['POST'])
@@ -74,7 +73,7 @@ def activate_invite_codeAPIView(request):
     phone = request.data.get('phone')
     token = request.data.get('token')
     invite_code = request.data.get('invite_code')
-    # TODO проверка валидности invite_code
+
     token_redis = redis_jwt.get(phone)
 
     error = 'Неверные данные'
@@ -108,7 +107,10 @@ def show_who_activated_invite_codeAPIView(request):
             invited_profiles = Profile.object.filter(inviter=profile.invite_code)
             invited_profiles_list = list(invited_profiles.values('phone'))
             for count in range(len(invited_profiles_list)):
-                data[count] = invited_profiles_list[count]['phone']
+                data[count+1] = invited_profiles_list[count]['phone']
             return Response(data, status=status.HTTP_200_OK)
 
     return Response({'error': 'Неверные данные', }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# TODO проверка валидности invite_code, проверка валидности номера телефона при получении

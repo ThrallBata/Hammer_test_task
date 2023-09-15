@@ -1,6 +1,7 @@
 import random
 
 from django.contrib.auth.base_user import BaseUserManager
+from django.core.validators import RegexValidator
 from django.db import models
 
 
@@ -16,7 +17,11 @@ class ProfileManager(BaseUserManager):
 
 
 class Profile(models.Model):
-    phone = models.CharField(max_length=30, null=False, verbose_name='Номер телефона')
+    phone_regex = RegexValidator(
+        regex=r'^(\+\d{1,3})?,?\s?\d{8,13}$',
+        message="Phone number must be entered in the format: '+79*********'."
+    )
+    phone = models.CharField(validators=[phone_regex], max_length=17, verbose_name='Номер телефона')
     invite_code = models.CharField(max_length=6, null=False, verbose_name='Код приглашения')
     code_usage = models.BooleanField(default=False)
     inviter = models.CharField(max_length=6, null=True, verbose_name='Код пригласившего')
